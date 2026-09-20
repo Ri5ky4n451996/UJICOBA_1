@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Guru - Rekap Nilai Sistem Komputer</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+            background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.95); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .pop-animation {
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #16a34a; 
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
+
+    <div id="login-container" class="w-full max-w-md bg-white rounded-2xl p-8 shadow-xl border border-slate-200 pop-animation">
+        <div class="text-center mb-6">
+            <div class="inline-block bg-green-100 text-green-700 p-4 rounded-2xl mb-3 shadow-inner">
+                <i class="fa-solid fa-user-shield text-4xl"></i>
+            </div>
+            <h1 class="text-2xl font-extrabold text-slate-800">Panel Guru</h1>
+            <p class="text-sm font-semibold text-slate-500 mt-1">Sistem Komputer: Perangkat Output & Storage</p>
+        </div>
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Kata Sandi Guru</label>
+                <div class="relative">
+                    <input type="password" id="adminPassword" placeholder="Masukkan sandi..." class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-green-600 focus:outline-none transition font-semibold text-slate-800 pr-10" onkeypress="if(event.key==='Enter') handleAdminLogin()">
+                    <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600">
+                        <i id="eye-icon" class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
+                <p class="text-xs text-slate-400 mt-1.5">Kata Sandi Default: <span class="font-bold text-green-700">guru123</span></p>
+            </div>
+
+            <div id="login-error" class="hidden text-xs font-bold text-red-600 bg-red-50 p-3 rounded-xl border border-red-200 flex items-center">
+                <i class="fa-solid fa-circle-exclamation mr-2 text-sm"></i>
+                <span id="login-error-text">Kata sandi salah!</span>
+            </div>
+
+            <button onclick="handleAdminLogin()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-4 rounded-xl transition shadow-lg flex items-center justify-center">
+                <i class="fa-solid fa-right-to-bracket mr-2"></i> Masuk ke Dashboard
+            </button>
+        </div>
+    </div>
+
+    <div id="dashboard-container" class="hidden w-full max-w-5xl bg-white rounded-2xl p-6 md:p-8 shadow-xl border border-slate-200 pop-animation">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center pb-6 border-b border-slate-200 gap-4">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="bg-green-100 text-green-800 text-xs font-extrabold px-3 py-1 rounded-full">Guru Mode</span>
+                    <h1 class="text-2xl font-extrabold text-slate-800">Rekap Hasil Evaluasi Siswa</h1>
+                </div>
+                <p class="text-xs text-slate-500 font-semibold mt-1">Materi: Perangkat Output & Storage (IPOS)</p>
+            </div>
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <button onclick="fetchData()" class="flex-1 md:flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl transition text-sm flex items-center justify-center">
+                    <i class="fa-solid fa-rotate mr-2"></i> Refresh Data
+                </button>
+                <button onclick="logoutAdmin()" class="flex-1 md:flex-none bg-red-50 hover:bg-red-100 text-red-700 font-bold px-4 py-2.5 rounded-xl transition text-sm flex items-center justify-center border border-red-200">
+                    <i class="fa-solid fa-right-from-bracket mr-2"></i> Keluar
+                </button>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 my-6">
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <div class="text-xs font-bold text-slate-500 uppercase">Total Siswa Selesai</div>
+                <div class="text-2xl font-black text-slate-800 mt-1" id="stat-total">0</div>
+            </div>
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <div class="text-xs font-bold text-slate-500 uppercase">Rata-Rata Nilai</div>
+                <div class="text-2xl font-black text-green-600 mt-1" id="stat-avg">0</div>
+            </div>
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <div class="text-xs font-bold text-slate-500 uppercase">Nilai Tertinggi</div>
+                <div class="text-2xl font-black text-blue-600 mt-1" id="stat-max">0</div>
+            </div>
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <div class="text-xs font-bold text-slate-500 uppercase">Nilai Terendah</div>
+                <div class="text-2xl font-black text-orange-600 mt-1" id="stat-min">0</div>
+            </div>
+        </div>
+
+        <!-- Filter & Download Action Bar -->
+        <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div class="flex flex-col sm:flex-row items-center gap-3 flex-grow">
+                <div class="w-full sm:w-auto min-w-[150px]">
+                    <select id="filterClass" onchange="applyFilters()" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-semibold text-sm focus:outline-none focus:border-green-600">
+                        <option value="">-- Semua Kelas --</option>
+                        <option value="7.8">Kelas 7.8</option>
+                        <option value="7.9">Kelas 7.9</option>
+                        <option value="7.10">Kelas 7.10</option>
+                        <option value="8.1">Kelas 8.1</option>
+                        <option value="8.2">Kelas 8.2</option>
+                        <option value="8.3">Kelas 8.3</option>
+                    </select>
+                </div>
+                <div class="w-full sm:w-auto flex-grow relative">
+                    <input type="text" id="searchName" onkeyup="applyFilters()" placeholder="Cari nama siswa..." class="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-300 font-semibold text-sm focus:outline-none focus:border-green-600">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-xs"></i>
+                </div>
+            </div>
+            <button onclick="downloadCSV()" class="bg-green-600 hover:bg-green-700 text-white font-bold px-5 py-2.5 rounded-xl transition text-sm shadow flex items-center justify-center whitespace-nowrap">
+                <i class="fa-solid fa-file-excel mr-2"></i> Unduh Rekap (.CSV)
+            </button>
+        </div>
+
+        <!-- Data Table -->
+        <div class="overflow-x-auto border border-slate-200 rounded-xl shadow-sm mb-4">
+            <table class="w-full text-left text-sm text-slate-700">
+                <thead class="bg-slate-100 uppercase text-xs font-extrabold text-slate-600 border-b border-slate-200">
+                    <tr>
+                        <th class="py-3.5 px-4">No</th>
+                        <th class="py-3.5 px-4">Waktu Selesai</th>
+                        <th class="py-3.5 px-4">Nama Siswa</th>
+                        <th class="py-3.5 px-4">Kelas</th>
+                        <th class="py-3.5 px-4 text-center">Jumlah Benar</th>
+                        <th class="py-3.5 px-4 text-center">Skor Akhir</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body" class="divide-y divide-slate-200 bg-white">
+                    <tr>
+                        <td colspan="6" class="text-center py-8 text-slate-400 font-semibold">
+                            <i class="fa-solid fa-spinner fa-spin mr-2"></i> Memuat data siswa...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="status-msg" class="text-xs font-semibold text-slate-500 text-right"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, getDocs, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'sistem-komputer-app';
+        let firebaseConfig = {};
+        try {
+            firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+                apiKey: "mock-key",
+                projectId: "mock-project"
+            };
+        } catch (e) { console.error("Firebase config error"); }
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        
+        let currentUser = null;
+        let allRecords = [];
+        const ADMIN_PASS = "guru123";
+
+        // Auth
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                currentUser = auth.currentUser;
+            } catch (error) {
+                console.error("Auth error:", error);
+            }
+        };
+        initAuth();
+
+        window.togglePasswordVisibility = () => {
+            const input = document.getElementById('adminPassword');
+            const icon = document.getElementById('eye-icon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        };
+
+        window.handleAdminLogin = () => {
+            const inputPass = document.getElementById('adminPassword').value;
+            const errorEl = document.getElementById('login-error');
+
+            if (inputPass === ADMIN_PASS) {
+                errorEl.classList.add('hidden');
+                document.getElementById('login-container').classList.add('hidden');
+                document.getElementById('dashboard-container').classList.remove('hidden');
+                fetchData();
+            } else {
+                errorEl.classList.remove('hidden');
+            }
+        };
+
+        window.logoutAdmin = () => {
+            document.getElementById('dashboard-container').classList.add('hidden');
+            document.getElementById('login-container').classList.remove('hidden');
+            document.getElementById('adminPassword').value = '';
+        };
+
+        window.fetchData = async () => {
+            const tbody = document.getElementById('table-body');
+            const statusMsg = document.getElementById('status-msg');
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Mengambil data dari server...</td></tr>`;
+            
+            if (!currentUser) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-red-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i> Gagal menghubungkan ke database. Silakan muat ulang halaman.</td></tr>`;
+                return;
+            }
+
+            try {
+                const resultsRef = collection(db, 'artifacts', appId, 'public', 'data', 'quiz_results');
+                const q = query(resultsRef);
+                const snapshot = await getDocs(q);
+                
+                allRecords = [];
+                snapshot.forEach(doc => allRecords.push(doc.data()));
+                
+                // Sort by timestamp desc (newest first)
+                allRecords.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                renderTable(allRecords);
+                updateStats(allRecords);
+                statusMsg.innerText = `Terakhir diperbarui: ${new Date().toLocaleTimeString('id-ID')}`;
+
+            } catch (error) {
+                console.error("Fetch error:", error);
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-red-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i> Terjadi kesalahan saat memuat data.</td></tr>`;
+            }
+        };
+
+        window.renderTable = (records) => {
+            const tbody = document.getElementById('table-body');
+            
+            if (records.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400 font-semibold">Belum ada data nilai yang terekam.</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            records.forEach((row, idx) => {
+                const dateObj = new Date(row.timestamp);
+                const dateStr = isNaN(dateObj) ? '-' : dateObj.toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                
+                let scoreBadgeClass = "bg-slate-100 text-slate-800";
+                if (row.score >= 8) scoreBadgeClass = "bg-green-100 text-green-800";
+                else if (row.score >= 6) scoreBadgeClass = "bg-blue-100 text-blue-800";
+                else scoreBadgeClass = "bg-orange-100 text-orange-800";
+
+                html += `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-3 px-4 font-bold text-slate-400">${idx + 1}</td>
+                        <td class="py-3 px-4 font-semibold text-slate-500 text-xs">${dateStr}</td>
+                        <td class="py-3 px-4 font-extrabold text-slate-800">${row.name}</td>
+                        <td class="py-3 px-4 font-bold text-slate-600"><span class="bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg text-xs">${row.class}</span></td>
+                        <td class="py-3 px-4 font-bold text-center text-slate-700">${row.correct} / 15</td>
+                        <td class="py-3 px-4 text-center">
+                            <span class="inline-block px-3 py-1 rounded-full font-black text-xs ${scoreBadgeClass}">${row.score}</span>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        };
+
+        window.updateStats = (records) => {
+            if (records.length === 0) {
+                document.getElementById('stat-total').innerText = '0';
+                document.getElementById('stat-avg').innerText = '0';
+                document.getElementById('stat-max').innerText = '0';
+                document.getElementById('stat-min').innerText = '0';
+                return;
+            }
+
+            const total = records.length;
+            const scores = records.map(r => Number(r.score) || 0);
+            const sum = scores.reduce((a, b) => a + b, 0);
+            const avg = (sum / total).toFixed(1);
+            const max = Math.max(...scores);
+            const min = Math.min(...scores);
+
+            document.getElementById('stat-total').innerText = total;
+            document.getElementById('stat-avg').innerText = avg;
+            document.getElementById('stat-max').innerText = max;
+            document.getElementById('stat-min').innerText = min;
+        };
+
+        window.applyFilters = () => {
+            const selectedClass = document.getElementById('filterClass').value;
+            const searchName = document.getElementById('searchName').value.toLowerCase().trim();
+
+            const filtered = allRecords.filter(item => {
+                const matchClass = selectedClass === "" || item.class === selectedClass;
+                const matchName = item.name.toLowerCase().includes(searchName);
+                return matchClass && matchName;
+            });
+
+            renderTable(filtered);
+            updateStats(filtered);
+        };
+
+        window.downloadCSV = () => {
+            if (allRecords.length === 0) {
+                alert("Tidak ada data untuk diunduh.");
+                return;
+            }
+
+            const selectedClass = document.getElementById('filterClass').value;
+            const searchName = document.getElementById('searchName').value.toLowerCase().trim();
+
+            const recordsToExport = allRecords.filter(item => {
+                const matchClass = selectedClass === "" || item.class === selectedClass;
+                const matchName = item.name.toLowerCase().includes(searchName);
+                return matchClass && matchName;
+            });
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Waktu,Nama Siswa,Kelas,Jumlah Benar,Skor Akhir\n";
+
+            recordsToExport.forEach(data => {
+                const dateObj = new Date(data.timestamp);
+                const formattedDate = isNaN(dateObj) ? data.timestamp : dateObj.toLocaleString('id-ID');
+                const name = `"${(data.name || '').replace(/"/g, '""')}"`;
+                csvContent += `${formattedDate},${name},${data.class},${data.correct},${data.score}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Rekap_Nilai_Sistem_Komputer_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+    </script>
+</body>
+</html>
