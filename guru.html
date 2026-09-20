@@ -166,7 +166,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, getDocs, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'sistem-komputer-app';
@@ -183,21 +183,33 @@
         const auth = getAuth(app);
         
         let currentUser = null;
+        let authPromise = null;
         let allRecords = [];
         const ADMIN_PASS = "guru123";
 
-        // Auth
-        const initAuth = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
+        // Auth initialization with Promise to avoid race condition
+        const initAuth = () => {
+            if (authPromise) return authPromise;
+            authPromise = new Promise(async (resolve) => {
+                try {
+                    if (auth.currentUser) {
+                        currentUser = auth.currentUser;
+                        return resolve(currentUser);
+                    }
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        const res = await signInWithCustomToken(auth, __initial_auth_token);
+                        currentUser = res.user;
+                    } else {
+                        const res = await signInAnonymously(auth);
+                        currentUser = res.user;
+                    }
+                    resolve(currentUser);
+                } catch (error) {
+                    console.error("Auth error:", error);
+                    resolve(null);
                 }
-                currentUser = auth.currentUser;
-            } catch (error) {
-                console.error("Auth error:", error);
-            }
+            });
+            return authPromise;
         };
         initAuth();
 
@@ -240,8 +252,16 @@
             const statusMsg = document.getElementById('status-msg');
             tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Mengambil data dari server...</td></tr>`;
             
+            // Wait for authentication if currentUser is not yet ready
             if (!currentUser) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-red-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i> Gagal menghubungkan ke database. Silakan muat ulang halaman.</td></tr>`;
+                currentUser = await initAuth();
+            }
+
+            if (!currentUser) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-red-500 font-semibold flex flex-col items-center justify-center gap-2">
+                    <div><i class="fa-solid fa-triangle-exclamation mr-2 text-xl"></i> Gagal menghubungkan ke database. Silakan muat ulang halaman.</div>
+                    <button onclick="fetchData()" class="mt-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-1.5 rounded-lg text-xs transition">Coba Lagi</button>
+                </td></tr>`;
                 return;
             }
 
@@ -262,7 +282,7 @@
 
             } catch (error) {
                 console.error("Fetch error:", error);
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-red-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i> Terjadi kesalahan saat memuat data.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-red-500 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-2"></i> Terjadi kesalahan saat memuat data. ${error.message || ''}</td></tr>`;
             }
         };
 
